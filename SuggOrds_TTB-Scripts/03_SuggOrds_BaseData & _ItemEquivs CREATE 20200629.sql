@@ -16,6 +16,9 @@
 -- 12/2/2020: Added stores 11 & 52 to exclusions list, since they're closing.
 -------------------------------------------------------------------
 -- 6/28/21: Commented out references to the hroXacns_Ages table since the reported data doesn't include inventory age.
+-------------------------------------------------------------------
+-- 2/22/22: Cleaned out some deprecated/old code no longer being used.
+-- Also moved the inset statement for SuggOrds_PARAMS into here
 
 
 --For TTB Suggested Orders, an additional month allows for the 
@@ -23,6 +26,34 @@
 declare @eDate datetime
 set @eDate = dateadd(DD,28,getdate())
 
+
+-- For ID'ing a specific run/set of suggested orders...
+declare @SetDescr varchar(100) = '2022 Wk10 Cycle, 90 Day TTB In-Stock'
+declare @RunDt date = getdate()
+insert into ReportsView.dbo.SuggOrds_Params
+values (
+	@SetDescr
+	,@RunDt --cell D2, RunDt, day suggestions are calculated.
+	,1000000 --cell F2, TitleCap, cap on number of title to suggest
+	,0  --cell H2, Rounding Method: -1= round down, 0= round, 1= round up
+	,0.9 --cell K2, minPctSld
+	,42 --cell O2, OrdFreq, Days Order Frequency
+	,0.8  --cell V2, minChPctNM
+	,0.8  --cell W2, minLocPctNM
+	,-2 --cell X2, minZPctNM
+	,0.5 --cell AC2, MinPctSldQS
+	,90 --cell AE2, DaysInvOrd, named range DaysInventory, used by QS & RS
+	,31 --cell AI2, DaysAtLoc, min days item can be in inventory at Loc
+	,4  --cell AK2, upper limit on Loc RoS z-score 
+	,8  --cell AQ2, 6moForQS
+	,'prj' --cell AW2, SalesForQS, alternately can be set to 'cur'
+	,'TTB' --cell BF2, ProdCmp, company being calculated
+	,-1 --cell BK2, ShelfCopies, 0 copies/title = 0; 1 copy/title = 1, n copies/title = -1
+	,90 --cell BJ2, BJ2, Days Inventory to order / project sales, used by SS
+	,8  --cell BM2, StackCap
+	,0   --cell SuggestedOrder!Q1, KeepOnHand: 0 = NO; 1 = YES
+	,1000000 --cell SuggestedOrder!O1, ShelfTitleCap
+)
 
 ----CDC WMS Inventory limits to items with inventory-------
 drop table if exists #icInv
@@ -122,28 +153,6 @@ select xp.*
 					or (xp.pvflow = 'set' and xp.pvCorInv = 0) 
 					or (xp.pvflow = 'in' and xp.pvQty = 0 and xp.pvCorInv = 0))
 			then DATEDIFF(dd,xp.pvDate,xp.Date) else 0 end [aZID]
-			
-	----fuzzyZeroInvDays Diagnostics
-	--,case when xp.corInv - ISNULL(-xp.Qty,xp.Inv) < 1 then 1000 else 0 end
-	--			+ case when xp.flow = 'in' then 100 
-	--					when (xp.flow = 'set' and xp.corInv = 0) then 200
-	--					else 0 end
-	--			+ case when (xp.pvflow = 'out' 
-	--					or xp.pvCorInv < 1 
-	--					or (xp.pvflow = 'set' and xp.pvCorInv = 0) 
-	--					or (xp.pvflow = 'in' and xp.pvQty = 0 and xp.pvCorInv = 0)) then 10
-	--					else 0 end
-	--		+ case when (DATEDIFF(dd,xp.pvDate,xp.Date) > 180 then 20
-	--			and (xp.flow not in ('out','set') or (xp.flow = 'set' and xp.CorInv > 0))) 
-	--		then DATEDIFF(dd,xp.pvDate,xp.Date) else 0 end [fZID]
-	----ZeroInventoryDays Diagnostics
-	--,case when xp.corInv - ISNULL(xp.Qty,xp.Inv) < 1 
-	--		and (xp.flow = 'in' or (xp.flow = 'set' and xp.corInv = 0))
-	--		and (xp.pvflow = 'out'
-	--				or xp.pvCorInv < 1 
-	--				or (xp.pvflow = 'set' and xp.pvCorInv = 0) 
-	--				or (xp.pvflow = 'in' and xp.pvQty = 0 and xp.pvCorInv = 0))
-	--		then DATEDIFF(dd,xp.pvDate,xp.Date) else 0 end [aZID]
 
 	--Running Inventory Levels Calculation	  
 	,sum(case when xp.ItemUnq = 1 then xp.CorInv else 0 end) over(partition by xp.Loc, xp.RptIt)[LGI]
@@ -202,8 +211,7 @@ group by xz.RptIt
 	,xz.Loc
 
 
-/*
---   drop table if exists ReportsView..SuggOrds_BaseData
+drop table if exists ReportsView..SuggOrds_BaseData
 
 create table ReportsView.dbo.SuggOrds_BaseData
 	([Loc] [char](5) NOT NULL
@@ -255,11 +263,6 @@ select *
 -- into ReportsView..SuggOrds_BaseData
 from #cItLocRU
 
--- -- Think it ends up being faster to add the PK after the fact...
--- alter table ReportsView..SuggOrds_BaseData
--- add constraint PK_SuggOrdsBaseData primary key(Loc,RptIt);
-
-*/
 
 
 --Finally calculating some of the needed fields--
@@ -321,7 +324,6 @@ from ReportsView..SuggOrds_BaseData bd
 
 -- Create tables on Sage & update the aRoS field
 -------------------------------------------------------------------------
--- /*
 drop table if exists ReportsView.dbo.SuggOrds_ItemEquivs
 select ri.PurchaseFromVendorID
 	,ng.RptIt
@@ -356,7 +358,7 @@ from ReportsView..ngXacns_Items ng
 	inner join ReportsView..vw_DistributionProductMaster ri with(nolock) on ng.RptIt = ri.ItemCode
 	inner join #AvgsStDevs ad on ng.RptIt = ad.RptIt
     left join #icInv ii on ng.ItemCode = ii.ItemCode
--- */
+
 
 update ReportsView..SuggOrds_ItemEquivs
 	set
@@ -387,81 +389,6 @@ from ReportsView..SuggOrds_ItemEquivs tar
 				from wms_ils..HPB_SCHEME_HEADER with(nolock)
 				where SCHEME_TYPE = 'Standard')iv on tar.Scheme = iv.Scheme
 
-
--- Moving these to SuggOrds_ItemClassification...
-
--- -- Scheme Details & Section-based Scheme Assignments----------------------
--- --------------------------------------------------------------------------
--- drop table if exists #SchQs
--- select '00'+sd.STORE_ID collate database_default as Loc 
--- 	,sd.Scheme_ID collate database_default as Scheme
--- 	,cast(case  when sh.Scheme_Notes in ('R2','R4') then avg(sd.Scheme_Qty)
--- 				when sh.Scheme_Notes = 'MVA' then sum(Scheme_Qty) 
--- 				else max(sd.Scheme_Qty) end as numeric(10,5))[SchQty]
--- into #SchQs
--- from wms_ils..HPB_Scheme_Detail sd with(nolock)
--- 	inner join wms_ils..HPB_Scheme_Header sh with(nolock)
--- 		on sd.Scheme_ID collate database_default = sh.scheme_ID collate database_default 
--- where sd.STORE_ID < '200'
--- 	and sd.STORE_ID not in ('020','027','028','042','060','063','079','089','092','093','101','106')
--- 	and sh.SCHEME_TYPE = 'Standard'
--- group by '00'+sd.STORE_ID collate database_default 
--- 	,sd.Scheme_ID collate database_default 
--- 	,sh.Scheme_Notes
-
-
-
--- -- BaseData Updates depended on an updated ItemEquivs------------------------
--- -----------------------------------------------------------------------------
--- -----------------------------------------------------------------------------
-
--- update ReportsView..SuggOrds_BaseData
--- 	set aSchQty = sq.SchQty
--- from ReportsView..SuggOrds_BaseData tar
--- 	inner join ReportsView..SuggOrds_ItemEquivs ie 
--- 		on tar.RptIt = ie.ItemCode
--- 	-- Joins on aScheme, which replaces non-standard schemes (eg CS,TTB ONLY)
--- 	-- with a default, section-based scheme
--- 	left join #SchQs sq on ie.aScheme = sq.Scheme and tar.Loc = sq.Loc
-
-
--- -- Which set of params is being used?----------------------------------------
--- -----------------------------------------------------------------------------
--- drop table if exists #params
--- select * 
--- into #params
--- from ReportsView.dbo.SuggOrds_Params
--- where setID = 1
-
-
--- -- Calculate Adjusted Rate of Sale (aRoS)------------------------------------
--- -----------------------------------------------------------------------------
-
--- declare @MinDaysAtLoc int = (select top 1 MinDaysAtLoc from #params)
--- declare @maxZRoS int = (select top 1 maxZRoS from #params)
-
--- update ReportsView..SuggOrds_BaseData
--- set aRoS = case when PctSld is null then ie.avgRoS
--- 				when (tar.TotInvDays <= @MinDaysAtLoc or (tar.QtyInb <= isnull(tar.aSchQty,0))) 
--- 						and tar.zRoS >= @maxZRoS 
--- 					then (tar.RoS + ie.avgRoS) / 2.0
--- 				else tar.RoS end
--- from ReportsView..SuggOrds_BaseData tar
--- 	inner join ReportsView..SuggOrds_ItemEquivs ie 
--- 		on tar.RptIt = ie.ItemCode
-
-
--- -- Calculate Adjusted Quantity on Hand (aQoH)--------------------------------
--- -----------------------------------------------------------------------------
--- -- BackoutDays varies by Loc, basically transit time. 
-
--- use ReportsView
--- update ReportsView..SuggOrds_BaseData
--- set aQoH = dbo.maxof(0,LGI - aRoS * lp.BackoutDays)
--- --     select count(*)
--- from ReportsView..SuggOrds_BaseData bd with(nolock)
--- 	inner join ReportsView..SuggOrds_LocParams lp with(nolock)
--- 		on bd.Loc = lp.Loc
 
 
 -- Update AvailWMS on ItemEquivs--------------------------------------
