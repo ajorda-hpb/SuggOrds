@@ -36,7 +36,7 @@ where setID = 41
 
 -- select * from ReportsView..SuggOrds_Params order by SetID desc
 
-declare @UseSetID int = 45  --(select max(SetID) from ReportsView..SuggOrds_OrigOrders)   --
+declare @UseSetID int = (select max(SetID) from ReportsView..SuggOrds_OrigOrders)   --51  --
 declare @runOutOfStocks bit = 0
 declare @OrderUse varchar(100) = (select SetDescr from ReportsView..SuggOrds_Params where setID = @UseSetID)
 

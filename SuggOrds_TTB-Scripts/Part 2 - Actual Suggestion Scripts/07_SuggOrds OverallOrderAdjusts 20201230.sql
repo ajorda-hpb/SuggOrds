@@ -1,45 +1,8 @@
 
-
--- select RptIt
---     ,sum(i.OrderQty)
--- --    select *
--- from ReportsView..SuggOrds_ItemEquivs i 
---     -- inner join ReportsView..ngXacns x on x.ItemCode = i.ItemCode
--- where i.RptIt in ('00000000000002001163','00000000000002011036','00000000000002011037','00000000000002011038','00000000000002011039','00000000000002011040','00000000000002011041')
--- group by RptIt
-
--- select Reorderable,* from ReportsView..vw_DistributionProductMaster  
--- where itemcode in ('00000000000002001163','00000000000002011036','00000000000002011037','00000000000002011038','00000000000002011039','00000000000002011040','00000000000002011041')
-
--- select Item collate database_default[Item]
---     ,right('00000000000000000000'+Item,20) collate database_default[ItemCode]
---     ,COMPANY collate database_default[Cmp]
---     ,max(a.LOC_INV_ATTRIBUTE9)[CasePick]
---     ,max(a.LOC_INV_ATTRIBUTE3)[InvAttrib]
---     ,sum(ON_HAND_QTY-SUSPENSE_QTY-ALLOCATED_QTY)[WmsInvQ]
---     ,sum(case when LOCATION_TEMPLATE = 'FWD Pick' then ON_HAND_QTY-SUSPENSE_QTY-ALLOCATED_QTY else 0 end)[WmsFpaInvQ]
--- from wms_ils..location_inventory i with(nolock)
---     left join wms_ils..LOCATION_INVENTORY_ATTRIBUTES a with(nolock)
---         on i.LOC_INV_ATTRIBUTES_ID = a.OBJECT_ID
--- where item in (
---     '2001163',
---     '2011036',
---     '2011037',
---     '2011038',
---     '2011039',
---     '2011040',
---     '2011041')
--- group by Item collate database_default
---     ,right('00000000000000000000'+Item,20) collate database_default
---     ,COMPANY collate database_default
--- having sum(ON_HAND_QTY-SUSPENSE_QTY-ALLOCATED_QTY) > 0
-
-
 -- Which set of items are orders being generated for?------------------------
 -----------------------------------------------------------------------------
--- setID 20 = params for FIXED 2021 Wk20 cycle.
---     select * from ReportsView..SuggOrds_Params order by SetID desc
-declare @UseSetID int = 45
+-- Lookup all sets: select * from ReportsView..SuggOrds_Params order by SetID desc
+declare @UseSetID int = (select max(SetID) from ReportsView..SuggOrds_OrigOrders) --51 --
 
 
 drop table if exists #ItemInventory
@@ -78,15 +41,16 @@ from ReportsView..SuggOrds_ItemEquivs ie with(nolock)
 where ie.RptIt in (select distinct RptIt from ReportsView..SuggOrds_OrigOrders)
 
 
--- Looking for weird shit-------------------------------------
+-- Looking for problematic product master records-------------
 select 'Has multiple currently reorderable ItemCodes!'[No Results = WIN], *
 from #ItemInventory
 where NumRords > 1
-union all     
-select 'multiple ItemCodes with inventory under 1 RptIt!'[No Results = WIN], *
-from #ItemInventory
-where NumIts > 1
-order by RptIt,ItRnks,ItemCode
+-- Not a big deal anymore:
+-- union all     
+-- select 'multiple ItemCodes with inventory under 1 RptIt!'[No Results = WIN], *
+-- from #ItemInventory
+-- where NumIts > 1
+-- order by RptIt,ItRnks,ItemCode
 
 
 
@@ -225,12 +189,9 @@ from ReportsView..SuggOrds_OrigOrders o with(nolock)
 where o.SetID = @UseSetID
 	and ie.PurchaseFromVendorID in ('TEXASBKMNA','TEXASBKMNB','TEXASBKNON','TEXASSTATI','TEXASBKPUZ','TEXASBKUPC')
     and i.WmsInvQ > 0
--- It's there because we only NEED to run mva/bottom-fill on stuff we DONT have enough inventory for.
-	and i.WmsInvQ < ivo.ChainOrdQ  -- WHY was this here?!???
-    -- and o.RptIt in ('00000000000002001163','00000000000002011036','00000000000002011037','00000000000002011038','00000000000002011039','00000000000002011040','00000000000002011041')
-    -- and o.RptIt = '00000000000002002137'
-
--- select sum(OrderQty) from #Orders where RptIt = '00000000000002002137'
+    -- The below is here because we only need to run mva/bottom-fill on stuff we DONT have enough inventory for.
+	and i.WmsInvQ < ivo.ChainOrdQ  
+    
 
 /*-----------------------------------------------------------------
 Next step is to reformat #Orders into #SingleCaseOrders. 
@@ -339,7 +300,7 @@ group by ii.pfVendor
 
 -- Loc-Item Order Details, incl Bottom-Fill Adjs to Oversolds----------
 -----------------------------------------------------------------------
---     declare @UseSetID int = 19
+--     declare @UseSetID int = (select max(SetID) from ReportsView..SuggOrds_OrigOrders) --19 --
 select i.pfVendor
     ,isnull(ivo.InvConsq,'')[InvConsq]
 	,o.Section
@@ -367,8 +328,6 @@ from ReportsView..SuggOrds_OrigOrders o
     left join WMS_ILS..HPB_SCHEME_HEADER sh 
         on ivo.aScheme = sh.SCHEME_ID collate database_default
 where o.SetID = @UseSetID
-    -- and o.RptIt = '00000000000002002137'
-	-- and i.pfVendor not in ('TEXASBKMNA')
 order by i.pfVendor
     ,ivo.InvConsq desc
 	,i.ItemCode
@@ -401,7 +360,6 @@ select ivo.pfVendor,ivo.InvConsq
 from #InvOrds ivo
     left join WMS_ILS..HPB_SCHEME_HEADER sh 
         on ivo.aScheme = sh.SCHEME_ID collate database_default
--- where --pfVendor not in ('TEXASBKMNA')
  order by pfVendor
     ,InvConsq desc
     ,ItemCode
