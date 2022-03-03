@@ -215,12 +215,11 @@ group by xz.RptIt
 	,xz.Loc
 
 
-/*
 
-select top 1000* from #cItLocRU
+
+-- select top 1000* from #cItLocRU
 
 drop table if exists ReportsView..hroSuggOrds_BaseData
-
 create table ReportsView.dbo.hroSuggOrds_BaseData
 	([Loc] [char](5) NOT NULL,
 	[RptIt] [varchar](20) NOT NULL,
@@ -269,7 +268,7 @@ insert into ReportsView..hroSuggOrds_BaseData
 select *
 from #cItLocRU
 
-
+/*
 --     select * from ReportsView..hroSuggOrds_BaseData into #cItLocRU
 drop table if exists ReportsView..hroSuggOrds_BaseData
 

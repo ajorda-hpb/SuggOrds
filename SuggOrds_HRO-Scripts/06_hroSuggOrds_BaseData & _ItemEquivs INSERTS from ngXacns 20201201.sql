@@ -214,51 +214,36 @@ group by xz.RptIt
 	,xz.Loc
 
 
-/*
---Sidenote... wtf is there overlap between hro & ng?! I'm just exlcuding it for now cos it's almost midnight an
-select RptIt,count(*) from #cItLocRU 
-where RptIt in (select distinct RptIt from ReportsView..hroSuggOrds_BaseData)
-group by RptIt order by RptIt
-select RptIt,count(*) from ReportsView..hroSuggOrds_BaseData
-where RptIt in (select distinct RptIt from #cItLocRU)
-group by RptIt order by RptIt
-
-select top 1000 *from ReportsView..hroSuggOrds_BaseData
-where RptIt = '00000000000010259573' order by Loc
-
-select top 1000 *from #cItLocRU 
-where RptIt = '00000000000010259573' order by Loc
-
-
-select count(*) from #cItLocRU 
-where RptIt in (select distinct RptIt from ReportsView..hroSuggOrds_BaseData)
-
--- On the off chance ngXacns is up to date, this just pulls the right records direct from SuggOrds_BaseData...
-select count(*) from #ActiveRptIts 
-where RptIt in (select distinct RptIt from ReportsView..SuggOrds_BaseData)
-
-select bd.*
-into #cItLocRU 
-from ReportsView..SuggOrds_BaseData bd
-	inner join #ActiveRptIts ar on ar.RptIt = bd.RptIt
-where bd.Loc not in ('00011','00020','00027','00028','00042','00052','00056','00060','00063','00079','00089','00092','00093','00101','00106')
-
 
 insert into ReportsView..hroSuggOrds_BaseData
 select *
 from #cItLocRU
 where RptIt not in (select distinct RptIt from ReportsView..hroSuggOrds_BaseData)
 
+
+/*
+--Misc overlap checks
+select RptIt,count(*) from #cItLocRU 
+where RptIt in (select distinct RptIt from ReportsView..hroSuggOrds_BaseData)
+group by RptIt order by RptIt
+
+select RptIt,count(*) from ReportsView..hroSuggOrds_BaseData
+where RptIt in (select distinct RptIt from #cItLocRU)
+group by RptIt order by RptIt
+
+
+select count(*) from #cItLocRU 
+where RptIt in (select distinct RptIt from ReportsView..hroSuggOrds_BaseData)
+
 select count(*) 
 from ReportsView..hroSuggOrds_BaseData bd
 	left join ReportsView..ngXacns_Items ni on bd.RptIt = ni.RptIt
 where ni.RptIt is not null
 
-delete bd
+select count(*) 
+-- delete bd
 from ReportsView..hroSuggOrds_BaseData bd
 	inner join ReportsView..ngXacns_Items ni on bd.RptIt = ni.RptIt
-
-
 */
 
 
@@ -357,21 +342,6 @@ from ReportsView..ngXacns_Items ng
     left join #icInv ii on ng.ItemCode = ii.ItemCode
 where ng.RptIt not in (select distinct RptIt from ReportsView..hroSuggOrds_ItemEquivs)
 
-
--- Don't think this is actually... needed?! wtf...
--- update ReportsView..hroSuggOrds_ItemEquivs
--- 	set
--- 	ChPctNM = ad.ChPctNM
--- 	,ChPctSld = ad.ChPctSld
--- 	,avgPctNM = ad.avgPctNM
--- 	,avgRcvDt = ad.avgRcvDt
--- 	,avgRoS = ad.avgRoS
--- 	,spanRcvDt = ad.spanRcvDt
--- 	,stdvPctNM = ad.stdvPctNM
--- 	,stdvRoS = ad.stdvRoS
--- 	,PctLocsSld = ad.PctLocsSld
--- from ReportsView..hroSuggOrds_ItemEquivs tar
--- 	inner join #AvgsStDevs ad on tar.RptIt = ad.RptIt
 
 
 -- Assigns Section-based Scheme ONLY TO items with a weird scheme
