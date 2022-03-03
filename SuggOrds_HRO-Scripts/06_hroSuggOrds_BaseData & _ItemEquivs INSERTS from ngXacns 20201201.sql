@@ -55,7 +55,7 @@ where (pm.Reorderable = 'Y' or pm.ReorderableItem = 'Y')
     and sb.riVendorID in ('IDAURORA','IDBENDONPU','IDBKSALESI','IDBOOKDEPO','IDBRYBELLY','IDC&DVISIO','IDCRAZART'
     ,'IDCROWNB&C','IDCROWNPOI','IDCUDDLEBA','IDEUROGRA','IDFOUNDIMG','IDIGLOOBOO','IDKALANLPT','IDKIKKERLA'
     ,'IDLBMAYASS','IDMELISSA&','IDMODERNPU','IDNOSTIMAG','IDOUTOFPRI','IDPEEPERS','IDSALESCOR','IDTOYSMITH'
-    ,'IDUNEMPLOY','IDUSPLAYIN','IDWISHPETS','IFDISCONFO','IFPROPERRE')  
+    ,'IDUNEMPLOY','IDUSPLAYIN','IDWISHPETS','IFDISCONFO','IFPROPERRE','IDMAKEITRE','IDGIANTMIC')  
 
 
 --Subset of the xacns table being used, plus desired indecies & previous entries
@@ -355,7 +355,7 @@ from ReportsView..ngXacns_Items ng
 	inner join ReportsView..vw_DistributionProductMaster ri with(nolock) on ng.RptIt = ri.ItemCode
 	inner join #AvgsStDevs ad on ng.RptIt = ad.RptIt
     left join #icInv ii on ng.ItemCode = ii.ItemCode
-where RptIt not in (select distinct RptIt from ReportsView..hroSuggOrds_ItemEquivs)
+where ng.RptIt not in (select distinct RptIt from ReportsView..hroSuggOrds_ItemEquivs)
 
 
 -- Don't think this is actually... needed?! wtf...
