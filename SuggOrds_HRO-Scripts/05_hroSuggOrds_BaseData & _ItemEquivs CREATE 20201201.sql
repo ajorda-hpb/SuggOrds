@@ -19,7 +19,10 @@
 -- 6/28/21: Commented out references to the hroXacns_Ages table since the reported data doesn't include inventory age.
 -------------------------------------------------------------------
 -- 12/07/21: Added store 056 to list of excluded stores cos they're closing :(
-
+-------------------------------------------------------------------
+-- 4/4/22: Added update to LGI to zer oout if there's been >180 days of inactivity.
+-------------------------------------------------------------------
+-- 4/7/22: Added stores 076 & 114 to list of excluded stores cos they too are closing.
 
 --For HRO Suggested Orders, since these run so infrequently, just assuming that
 -- everything that should be received has been received.
@@ -99,7 +102,7 @@ from ReportsView..hroXacns ng
     -- left join ReportsView..hroXacns_Ages ag with(nolock) on ng.Loc = ag.Loc 
     --     and ng.Item = ag.Item and ng.ItemCode = ag.ItemCode and ng.u = ag.u
 where ng.[Date] < @eDate
-	and ng.Loc not in ('00011','00020','00027','00028','00042','00052','00056','00060','00063','00079','00089','00092','00093','00101','00106')
+	and ng.Loc not in ('00011','00020','00027','00028','00042','00052','00056','00060','00063','00076','00079','00089','00092','00093','00101','00106','00114')
 	
 
 update tar
@@ -292,6 +295,8 @@ update ReportsView..hroSuggOrds_BaseData
 	,PctNM = (SoldQty - QtyMDSld) * 1.0 / isnull(nullif(SoldQty + TshDntQty,0),1)
 	-- TODO: Should donate xfers be removed from the denominator?
 	,PctSld = SoldQty * 1.0 / nullif(ShipQty + RtrnQty + iStSQty - oStSQty - BksQty - DmgQty,0)
+	-- 22/04/04: Requseted that LGI show 0 if it's been more than 180 days since last activity.
+	,LGI = case when DaysToToday > 180 then 0 else LGI end
 from ReportsView..hroSuggOrds_BaseData 
 
 

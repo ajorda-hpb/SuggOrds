@@ -17,6 +17,9 @@
 -- TODO: DID YOU UPDATE ngXans_SetAdjs & ngXans_Ages?????
 -------------------------------------------------------------------
 -- 6/28/21: Commented out references to the hroXacns_Ages table since the reported data doesn't include inventory age.
+-------------------------------------------------------------------
+-- 4/7/22: Added stores 076 & 114 to list of exclusions cos they're closing.
+-- Also added update to LGI to zer oout if there's been >180 days of inactivity.
 
 --For inclusion in hroSuggOrds, this uses same date as hroSuggOrds_BaseData CREATE file.
 declare @eDate datetime
@@ -55,7 +58,7 @@ where (pm.Reorderable = 'Y' or pm.ReorderableItem = 'Y')
     and sb.riVendorID in ('IDAURORA','IDBENDONPU','IDBKSALESI','IDBOOKDEPO','IDBRYBELLY','IDC&DVISIO','IDCRAZART'
     ,'IDCROWNB&C','IDCROWNPOI','IDCUDDLEBA','IDEUROGRA','IDFOUNDIMG','IDIGLOOBOO','IDKALANLPT','IDKIKKERLA'
     ,'IDLBMAYASS','IDMELISSA&','IDMODERNPU','IDNOSTIMAG','IDOUTOFPRI','IDPEEPERS','IDSALESCOR','IDTOYSMITH'
-    ,'IDUNEMPLOY','IDUSPLAYIN','IDWISHPETS','IFDISCONFO','IFPROPERRE','IDMAKEITRE','IDGIANTMIC')  
+    ,'IDUNEMPLOY','IDUSPLAYIN','IDWISHPETS','IFDISCONFO','IFPROPERRE','IDMAKEITRE','IDGIANTMIC','IFFATCAT','IDUSMEDIAP')  
 
 
 --Subset of the xacns table being used, plus desired indecies & previous entries
@@ -98,7 +101,7 @@ from ReportsView..ngXacns ng
     -- left join ReportsView..ngXacns_Ages ag with(nolock)
     --     on ng.ItemCode = ag.ItemCode and ng.Loc = ag.Loc and ng.u = ag.u
 where ng.[Date] < @eDate
-	and ng.Loc not in ('00011','00020','00027','00028','00042','00052','00056','00060','00063','00079','00089','00092','00093','00101','00106')
+	and ng.Loc not in ('00011','00020','00027','00028','00042','00052','00056','00060','00063','00076','00079','00089','00092','00093','00101','00106','00114')
 
 
 update tar
@@ -261,6 +264,8 @@ update ReportsView..hroSuggOrds_BaseData
 	,PctNM = (SoldQty - QtyMDSld) * 1.0 / isnull(nullif(SoldQty + TshDntQty,0),1)
 	-- TODO: Should donate xfers be removed from the denominator?
 	,PctSld = SoldQty * 1.0 / nullif(ShipQty + RtrnQty + iStSQty - oStSQty - BksQty - DmgQty,0)
+	-- 22/04/04: Requseted that LGI show 0 if it's been more than 180 days since last activity.
+	,LGI = case when DaysToToday > 180 then 0 else LGI end
 from ReportsView..hroSuggOrds_BaseData 
 
 
